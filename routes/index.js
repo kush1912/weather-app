@@ -12,7 +12,7 @@ let appId  = 'appid=07cfed3be2655cdb0cd065f883db16db';
 let s    = '&cnt=5'
 let units  = '&units=metric'; 
 
-var request = require('request');
+var axios = require('axios');
 
 
 /* GET home page. */
@@ -25,19 +25,28 @@ router.post('/weather', function(req, res, next){
   u = url+city+"&"+appId;
   console.log(u)
 
- request(u, function (error, response, body) {
-      console.log('error:', error); 
-      console.log('statusCode:', response && response.statusCode);
-      body = JSON.parse(body);
+ axios.get(u)
+    .then(function (response) {
+      console.log('statusCode:', response && response.status);
+      let body = response.data;
       console.log(body);
-      if(error && response.statusCode != 200){
-        throw error;
+
+      if (response.status !== 200) {
+        // create an error so it will be handled by express error handlers
+        let err = new Error('Unexpected response status: ' + response.status);
+        err.status = response.status;
+        throw err;
       }
 
-    let count = (body.sys.country) ? body.sys.country : '' ;
-    let forecast = "For city "+city+', country '+count;
-    res.render('index', {body : body, forecast: forecast});
-   });
+      let count = (body.sys && body.sys.country) ? body.sys.country : '';
+      let forecast = "For city " + city + ', country ' + count;
+      res.render('index', { body: body, forecast: forecast });
+    })
+    .catch(function (error) {
+      console.log('error:', error && error.message ? error.message : error);
+      // forward to express error handlers
+      next(error);
+    });
 
 
 });
